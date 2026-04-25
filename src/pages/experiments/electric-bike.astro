@@ -1,0 +1,7 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Experiment from '../../components/experiments/electric-bike/page.tsx';
+---
+<Layout title="electric-bike">
+    <Experiment client:only="react" />
+</Layout>

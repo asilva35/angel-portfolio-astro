@@ -1,0 +1,7 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Experiment from '../../components/experiments/face-configurator/page.tsx';
+---
+<Layout title="face-configurator">
+    <Experiment client:only="react" />
+</Layout>

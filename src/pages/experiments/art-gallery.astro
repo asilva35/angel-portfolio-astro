@@ -1,0 +1,7 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Experiment from '../../components/experiments/art-gallery/page.tsx';
+---
+<Layout title="art-gallery">
+    <Experiment client:only="react" />
+</Layout>
