@@ -1,12 +1,3 @@
-'use client';
-
-
-
-
-
-
-
-
 const EXPERIMENTS = [
     { path: '/experiments/stress-materials', name: 'Stress Analysis Beam', color: 'text-cyan-400 group-hover:text-cyan-300' },
     { path: '/experiments/configurator', name: 'Configurator', color: 'text-slate-400 group-hover:text-slate-300' },
@@ -35,6 +26,7 @@ const EXPERIMENTS = [
     { path: '/experiments/image-to-lines', name: 'Image to Lines', color: 'text-pink-400 group-hover:text-pink-300' },
     { path: '/experiments/interactive-plane', name: 'Interactive Plane', color: 'text-pink-400 group-hover:text-pink-300' },
     { path: '/experiments/svg-animation', name: 'SVG Animation', color: 'text-pink-400 group-hover:text-pink-300' },
+    { path: '/experiments/suvcar', name: 'Suv Car', color: 'text-pink-400 group-hover:text-pink-300' },
 ]
 
 

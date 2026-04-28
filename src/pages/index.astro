@@ -1,7 +1,12 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import AppPage from '../components/AppPage.tsx';
+import Layout from "../layouts/Layout.astro";
+import AppPage from "../components/AppPage.tsx";
 ---
-<Layout title="Home">
+
+<Layout
+    title="Angel's Portfolio"
+    description="Frontend Developer, Creative Web Designer, Marketing Architect, 3D Artist, IA Automation Engineer"
+    image="/assets/images/og-image.png"
+>
     <AppPage client:only="react" />
 </Layout>

@@ -1,7 +1,12 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import Experiment from '../../components/experiments/svg-animation/page.tsx';
+import Layout from "../../layouts/Layout.astro";
+import Experiment from "../../components/experiments/svg-animation/page.tsx";
 ---
-<Layout title="svg-animation">
+
+<Layout
+    title="SVG Animation - Angel's Portfolio"
+    description="SVG Animation - Angel's Portfolio"
+    image="/assets/images/og-image.png"
+>
     <Experiment client:only="react" />
 </Layout>

@@ -1,7 +1,12 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import Experiment from '../../components/experiments/academic/page.tsx';
+import Layout from "../../layouts/Layout.astro";
+import Experiment from "../../components/experiments/academic/page.tsx";
 ---
-<Layout title="academic">
+
+<Layout
+    title="Academic - Angel's Portfolio"
+    description="Academic - Angel's Portfolio"
+    image="/assets/images/og-image.png"
+>
     <Experiment client:only="react" />
 </Layout>
