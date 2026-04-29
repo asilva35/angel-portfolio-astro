@@ -1,7 +1,7 @@
 import { Suspense, useMemo, useState, useRef, useEffect } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import {
-    OrbitControls,
+    CameraControls,
     Stats,
     useGLTF,
     ContactShadows,
@@ -27,6 +27,7 @@ const matcapTextures = {
     earth: '/assets/textures/matcaps/earth.png',
     concrete: '/assets/textures/concrete_tiles_02_diff_1k.jpg',
     pavement: '/assets/textures/pavement.png',
+    blueMate: '/assets/textures/matcaps/blue-mate.png',
 };
 
 function Smoke() {
@@ -91,33 +92,69 @@ function Smoke() {
 }
 
 
-function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, darkMode: boolean, firstAnimation: boolean }) {
+function Scene({ isDriving, darkMode, firstAnimation, isInsideCar }: { isDriving: boolean, darkMode: boolean, firstAnimation: boolean, isInsideCar: boolean }) {
     const { scene } = useGLTF('/assets/models/gltf/SuvCar.glb');
     const { camera } = useThree();
     const textures = useTexture(matcapTextures);
     const floorRef = useRef<THREE.Mesh>(null);
     const timeline = useRef<gsap.core.Timeline | null>(null);
+    const [firstAnimationFinished, setFirstAnimationFinished] = useState(false);
+    const seatRef = useRef<THREE.Object3D>(null);
+    const controlsRef = useRef<CameraControls>(null);
+
+    useEffect(() => {
+        if (!controlsRef.current || !firstAnimationFinished) return;
+
+        if (isInsideCar && seatRef.current) {
+            const worldPos = new THREE.Vector3();
+            seatRef.current.getWorldPosition(worldPos);
+
+            // Posicionar la cámara en el asiento y mirar hacia adelante
+            controlsRef.current.setLookAt(
+                worldPos.x, worldPos.y + 0.3, worldPos.z,
+                worldPos.x, worldPos.y + 0.3, worldPos.z + 0.1,
+                true
+            );
+        } else if (firstAnimationFinished) {
+            // Volver a la vista exterior
+            controlsRef.current.setLookAt(5, 2, 1, 0, 1, 0, true);
+        }
+    }, [isInsideCar, firstAnimationFinished]);
 
     // Camera intro animation
     useEffect(() => {
-        gsap.to(camera.position, {
-            z: 6,
-            duration: 4.0,
-            ease: "power3.out",
-            delay: 0.2 // Small delay for loading smoothness
-        });
+        if (controlsRef.current) {
+            controlsRef.current.setLookAt(0, 1, 7, 0, 1, 0, false);
+            const proxy = { x: 0, y: 1, z: 7, tx: 0, ty: 1, tz: 0 };
+            gsap.to(proxy, {
+                z: 6,
+                duration: 4.0,
+                ease: "power3.out",
+                delay: 0.2,
+                onUpdate: () => {
+                    controlsRef.current?.setLookAt(proxy.x, proxy.y, proxy.z, proxy.tx, proxy.ty, proxy.tz, false);
+                }
+            });
+        }
     }, [camera]);
 
     // First Animation: Put Camera one Side of Car
     useEffect(() => {
-        if (firstAnimation) {
-            gsap.to(camera.position, {
+        if (firstAnimation && controlsRef.current) {
+            const proxy = { x: 0, y: 1, z: 6, tx: 0, ty: 1, tz: 0 };
+            gsap.to(proxy, {
                 x: 5,
                 y: 2,
                 z: 1,
                 duration: 2,
                 ease: "power3.out",
-                delay: 0.5
+                delay: 0.5,
+                onUpdate: () => {
+                    controlsRef.current?.setLookAt(proxy.x, proxy.y, proxy.z, proxy.tx, proxy.ty, proxy.tz, false);
+                },
+                onComplete: () => {
+                    setFirstAnimationFinished(true);
+                }
             });
         }
     }, [firstAnimation]);
@@ -137,19 +174,19 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
         color: '#e1f6f3',
     }), [textureConcrete]);
 
-    const seatMaterial = new THREE.MeshMatcapMaterial({
-        matcap: textures.leatherGray,
-    })
+    const seatMaterial = useMemo(() => new THREE.MeshMatcapMaterial({
+        matcap: textures.plasticBlack,
+    }), [textures.plasticBlack]);
 
-    const leatherGreyMaterial = new THREE.MeshMatcapMaterial({
+    const leatherGreyMaterial = useMemo(() => new THREE.MeshMatcapMaterial({
         matcap: textures.leatherGray,
-    })
+    }), [textures.leatherGray]);
 
-    const glassRedMaterial = new THREE.MeshMatcapMaterial({
+    const glassRedMaterial = useMemo(() => new THREE.MeshMatcapMaterial({
         matcap: textures.mateGray,
         transparent: true,
-        opacity: 0.5,
-    })
+        opacity: 0.2,
+    }), [textures.mateGray]);
 
     const reflectBumpGMaterial = new THREE.MeshMatcapMaterial({
         matcap: textures.mateGray,
@@ -215,28 +252,30 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
         matcap: textures.mateGray,
     })
 
-    const greenMaterial = useMemo(() => new THREE.MeshMatcapMaterial({
+    const carBodyMaterial = useMemo(() => new THREE.MeshMatcapMaterial({
         matcap: textures.emerald,
         color: '#808ceb',
     }), [textures.emerald]);
 
-    const metalBlackMaterial = new THREE.MeshMatcapMaterial({
+    const metalBlackMaterial = useMemo(() => new THREE.MeshMatcapMaterial({
         matcap: textures.plasticBlack,
-    })
+    }), [textures.plasticBlack]);
 
-    const chromeMaterial = new THREE.MeshMatcapMaterial({
-        matcap: textures.polishedMetal,
-    })
-
-    const tireRubberMaterial = new THREE.MeshMatcapMaterial({
+    const chromeMaterial = useMemo(() => new THREE.MeshMatcapMaterial({
         matcap: textures.rubberBlack,
-    })
+        color: '#d5d5d8',
+    }), [textures.rubberBlack]);
 
-    const carGlassMaterial = new THREE.MeshMatcapMaterial({
+    const tireRubberMaterial = useMemo(() => new THREE.MeshMatcapMaterial({
+        matcap: textures.mateGray,
+        color: '#383737',
+    }), [textures.mateGray]);
+
+    const carGlassMaterial = useMemo(() => new THREE.MeshMatcapMaterial({
         matcap: textures.mateGray,
         transparent: true,
-        opacity: 0.5,
-    })
+        opacity: 0.2,
+    }), [textures.mateGray]);
 
     const blackMaterial = useMemo(() => new THREE.MeshBasicMaterial({ color: 'black' }), []);
 
@@ -263,95 +302,141 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
     }, [isDriving]);
 
     useEffect(() => {
+        if (!controlsRef.current) return;
+
         if (timeline.current) {
             timeline.current.kill();
             timeline.current = null;
         }
 
-        timeline.current = gsap.timeline();
+        if (!isDriving || isInsideCar) {
+            if (firstAnimationFinished && !isInsideCar) {
+                controlsRef.current.setLookAt(5, 2, 1, 0, 1, 0, true);
+            }
+            return;
+        }
 
-        if (!isDriving) return;
+        const proxy = {
+            x: 5,
+            y: 2,
+            z: 1,
+            tx: 0,
+            ty: 1,
+            tz: 0
+        };
 
-        timeline.current.to(camera.position, {
+        timeline.current = gsap.timeline({
+            repeat: -1,
+            yoyo: true,
+            onUpdate: () => {
+                controlsRef.current?.setLookAt(proxy.x, proxy.y, proxy.z, proxy.tx, proxy.ty, proxy.tz, false);
+            }
+        });
+
+        timeline.current.to(proxy, {
             x: -2,
             y: 1.25,
             z: 4.73,
+            tx: 0,
+            ty: 0,
+            tz: 0,
             duration: 3,
             ease: "power3.inOut",
-        }, 't1').to(camera.lookAt, {
-            x: 0,
-            y: 0,
-            z: 0,
-            duration: 3,
-            ease: "power3.inOut",
+            onComplete: () => {
+                console.log("Complete t1");
+            }
         }, 't1');
 
-        timeline.current.to(camera.position, {
-            x: -2.1,
-            y: 1.10,
-            z: 1.22,
-            duration: 2,
-            ease: "power3.inOut",
-        }, 't2').to(camera.lookAt, {
-            x: 0,
-            y: 0,
-            z: 0,
-            duration: 2,
-            ease: "power3.inOut",
-        }, 't2');
-
-        timeline.current.to(camera.position, {
-            x: 2.17,
-            y: 1.38,
-            z: -4.39,
-            duration: 2,
-            ease: "power3.inOut",
-        }, 't3').to(camera.lookAt, {
-            x: 0,
-            y: 0,
-            z: 0,
-            duration: 2,
-            ease: "power3.inOut",
-        }, 't3');
-
-        timeline.current.to(camera.position, {
-            x: 0,
-            y: 4.9,
-            z: 4.8,
+        timeline.current.to(proxy, {
+            x: -5,
+            y: 1.1,
+            z: 1.4,
+            tx: 0,
+            ty: 0,
+            tz: 0,
             duration: 2,
             ease: "power3.inOut",
             onComplete: () => {
-                // loop the animation to the begining
-                timeline.current!.restart();
+                console.log("Complete t2");
             }
-        }, 't4').to(camera.lookAt, {
-            x: 0,
-            y: 0,
-            z: 0,
+        }, 't2');
+
+        timeline.current.to(proxy, {
+            x: -1.97,
+            y: 1.31,
+            z: -4.74,
+            tx: 0,
+            ty: 0,
+            tz: 0,
             duration: 2,
             ease: "power3.inOut",
+            onComplete: () => {
+                console.log("Complete t3");
+            }
+        }, 't3');
+
+        timeline.current.to(proxy, {
+            x: 0,
+            y: 4.9,
+            z: 4.8,
+            tx: 0,
+            ty: 0,
+            tz: 0,
+            duration: 2,
+            ease: "power3.inOut",
+            onComplete: () => {
+                console.log("Complete t4");
+            }
         }, 't4');
 
 
-        timeline.current.to(camera.position, {
-            x: -1.31,
-            y: 0.829,
-            z: 2.95,
+        timeline.current.to(proxy, {
+            x: 2.28,
+            y: 0.83,
+            z: 3.9,
+            tx: 0,
+            ty: 0,
+            tz: 0,
             duration: 2,
             ease: "power3.inOut",
-        }, 't5').to(camera.lookAt, {
-            x: 0,
-            y: 0,
-            z: 0,
-            duration: 2,
-            ease: "power3.inOut",
+            onComplete: () => {
+                console.log("Complete t5");
+            }
         }, 't5');
 
+        timeline.current.to(proxy, {
+            x: 1.66,
+            y: 1.57,
+            z: -3.89,
+            tx: 0,
+            ty: 0,
+            tz: 0,
+            duration: 2,
+            ease: "power3.inOut",
+            onComplete: () => {
+                console.log("Complete t6");
+            }
+        }, 't6');
+
+        timeline.current.to(proxy, {
+            x: 5.56,
+            y: 4.52,
+            z: 4.18,
+            tx: 0,
+            ty: 0,
+            tz: 0,
+            duration: 2,
+            ease: "power3.inOut",
+            onComplete: () => {
+                console.log("Complete t7");
+            }
+        }, 't7');
+
         return () => {
-            timeline.current!.kill();
+            timeline.current?.kill();
             timeline.current = null;
         }
-    }, [isDriving]);
+    }, [isDriving, isInsideCar, firstAnimationFinished]);
 
     useEffect(() => {
         if (floorRef.current) {
@@ -363,6 +448,9 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
         }
         if (carGroupRef.current) {
             carGroupRef.current.traverse((child) => {
+                if (child.name.includes('SeatAxis')) {
+                    seatRef.current = child;
+                }
                 if ((child as THREE.Mesh).isMesh) {
                     const mesh = child as THREE.Mesh;
                     mesh.castShadow = false;
@@ -382,6 +470,16 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
                                 mesh.material = lightEmmisiveMaterial;
                             } else if (mesh.name.includes('carPaint_doors010_glass_clear_0')) {
                                 mesh.visible = false;
+                            } else if (mesh.name.includes('_leather_grey')) {
+                                return;
+                            } else if (mesh.name.includes('_seats_0')) {
+                                return;
+                            } else if (mesh.name.includes('_plastic_rough_black_0')) {
+                                return;
+                            } else if (mesh.name.includes('_plastic_rough_black_plus_0')) {
+                                return;
+                            } else if (mesh.name.includes('_intD_0')) {
+                                return;
                             } else {
                                 mesh.material = blackMaterial;
                             }
@@ -391,58 +489,58 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
                         // Original material assignment logic
                         const matName = (mesh.material as THREE.MeshStandardMaterial).name;
                         if (mesh.name.includes('body_carpaint_metalic_green')) {
-                            mesh.material = greenMaterial;
+                            mesh.material = carBodyMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors022_plastic_shiny_black_0')) {
+                        else if (mesh.name.includes('_plastic_shiny_black_0')) {
                             mesh.material = metalBlackMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors017_chromerough_0')) {
+                        else if (mesh.name.includes('_chromerough_0')) {
                             mesh.material = chromeMaterial;
                         }
-                        else if (mesh.name.includes('wheelBkL_tire_0')) {
+                        else if (mesh.name.includes('wheelBkL_tire_0') || mesh.name.includes('wheelFtL_tire_0') || mesh.name.includes('wheelFtR_tire_0') || mesh.name.includes('wheelBkR_tire_0')) {
                             mesh.material = tireRubberMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors010_glass_clear_0')) {
+                        else if (mesh.name.includes('_glass_clear_0')) {
                             mesh.material = carGlassMaterial;
                             mesh.visible = true;
                         }
-                        else if (mesh.name.includes('carPaint_doors_seats_0')) {
-                            mesh.material = seatMaterial;
+                        else if (mesh.name.includes('_seats_0')) {
+                            //mesh.material = seatMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors015_leather_grey')) {
-                            mesh.material = leatherGreyMaterial;
+                        else if (mesh.name.includes('_leather_grey')) {
+                            //mesh.material = seatMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors024_glass_red_0')) {
+                        else if (mesh.name.includes('_glass_red_0')) {
                             mesh.material = glassRedMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors026_reflectBumpG_0')) {
+                        else if (mesh.name.includes('_reflectBumpG_0')) {
                             mesh.material = reflectBumpGMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors028_glass_red_bumpB_0')) {
+                        else if (mesh.name.includes('_glass_red_bumpB_0')) {
                             mesh.material = glassRedMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors029_red_illum_0')) {
+                        else if (mesh.name.includes('_red_illum_0')) {
                             mesh.material = redIllumMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors032_glass_bumpL_0')) {
+                        else if (mesh.name.includes('_glass_bumpL_0')) {
                             mesh.material = glassBumpMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors033_glass_bumpG_0')) {
+                        else if (mesh.name.includes('_glass_bumpG_0')) {
                             mesh.material = glassBumpMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors034_chromeBumpA_0')) {
+                        else if (mesh.name.includes('_chromeBumpA_0')) {
                             mesh.material = chromeBumpMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors039_red_illumB_0')) {
+                        else if (mesh.name.includes('_red_illumB_0')) {
                             mesh.material = redIllumBMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors040_intD_0')) {
-                            mesh.material = intDMaterial;
+                        else if (mesh.name.includes('_intD_0')) {
+                            //mesh.material = intDMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors041_plate_0')) {
+                        else if (mesh.name.includes('_plate_0')) {
                             mesh.material = plateMaterial;
                         }
-                        else if (mesh.name.includes('carPaint_doors042_led_0')) {
+                        else if (mesh.name.includes('_led_0')) {
                             mesh.material = material22Material;
                         }
                         else if (mesh.name.includes('_metal_rough_0') || mesh.name.includes('wheelFtL001')) {
@@ -459,12 +557,12 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
                         } else if (mesh.name.includes('_chrome_0') || mesh.name.includes('wheelFtL003')) {
                             mesh.material = chromeMaterial;
                         } else if (mesh.name.includes('_plastic_rough_black_0') || mesh.name.includes('wheelFtL007')) {
-                            mesh.material = tireRubberMaterial;
-                        } else if (mesh.name.includes('carPaint_doors019_plastic_rough_black_plus_0')) {
-                            mesh.material = tireRubberMaterial;
+                            //mesh.material = metalBlackMaterial;
+                        } else if (mesh.name.includes('_plastic_rough_black_plus_0')) {
+                            // mesh.material = metalBlackMaterial;
                         } else if (mesh.name.includes('_metal_black_0') || mesh.name.includes('wheelFtL005')) {
                             mesh.material = metalRoughDarkMaterial;
-                        } else if (mesh.name.includes('carPaint_doors021_glass_bumpA_0')) {
+                        } else if (mesh.name.includes('_glass_bumpA_0')) {
                             mesh.material = glassBumpMaterial;
                         }
                     }
@@ -522,10 +620,14 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
             if (e.key === ' ') {
                 console.log(camera.position.x, camera.position.y, camera.position.z)
             }
+            if (e.key === 'c') {
+                camera.position.set(0.343, 1.15, -0.88);
+                camera.lookAt(0, 0, 0);
+            }
         };
         window.addEventListener('keydown', handleKeyPress);
         return () => window.removeEventListener('keydown', handleKeyPress);
-    }, [isDriving]);
+    }, []);
 
     return (
         <>
@@ -535,9 +637,8 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
             </group>
             {/* <Stats /> */}
             <fog attach="fog" args={['#e1f6f3ff', 5, 15]} />
-            {/* <Environment background={false} preset="apartment" /> */}
-            {/* <ambientLight intensity={0.5} />
-            <directionalLight position={[10, 10, 10]} intensity={2} /> */}
+            {isInsideCar && <pointLight position={[0, 0, 0]} intensity={2} />}
+            {isInsideCar && <pointLight position={[0, 1.5, 0]} intensity={1} />}
             <ContactShadows
                 position={[0, 0, 0]}
                 opacity={0.6}
@@ -545,16 +646,15 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
                 blur={2}
                 far={4}
             />
-            <OrbitControls
-                enableDamping
-                dampingFactor={0.06}
-                rotateSpeed={0.55}
-                zoomSpeed={0.8}
-                panSpeed={0.6}
-                minDistance={2}
-                maxDistance={16}
-                maxPolarAngle={Math.PI / 2 - 0.05}
-                target={[0, 1, 0]}
+            <CameraControls
+                ref={controlsRef}
+                makeDefault
+                minDistance={isInsideCar ? 0.001 : 3}
+                maxDistance={isInsideCar ? 0.001 : 7}
+                minAzimuthAngle={-Infinity}
+                maxAzimuthAngle={Infinity}
+                minPolarAngle={0}
+                maxPolarAngle={isInsideCar ? Math.PI : Math.PI / 2}
             />
         </>
     )
@@ -648,6 +748,7 @@ export default function SuvCar() {
     const [showUi, setShowUi] = useState(false);
     const engineSound = useRef<HTMLAudioElement | null>(null);
     const backgroundSound = useRef<HTMLAudioElement | null>(null);
+    const [isInsideCar, setInsideCar] = useState(false);
 
     useEffect(() => {
         engineSound.current = new Audio('/assets/sounds/start-engine.mp3');
@@ -745,6 +846,38 @@ export default function SuvCar() {
                 {isDriving ? 'STOP ENGINE' : 'START ENGINE'}
             </button>}
 
+            {(showUi && !isDriving) && <button
+                onClick={() => {
+                    setInsideCar(!isInsideCar);
+                }}
+                style={{
+                    position: 'absolute',
+                    bottom: '60px',
+                    right: '150px',
+                    transform: 'translateX(-50%)',
+                    zIndex: 20,
+                    padding: '0',
+                    borderRadius: '100%',
+                    border: 'solid 1px #fff',
+                    background: isInsideCar ? '#ff4757' : '#4d4d4fff',
+                    color: '#ccc',
+                    fontSize: '0.8rem',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                    transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    width: '70px',
+                    height: '70px',
+                    gap: '12px',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                }}
+            >
+                {isInsideCar ? 'OUTSIDE CAR' : 'INSIDE CAR'}
+            </button>}
+
             <style>{`
                 @keyframes pulse {
                     0% { transform: scale(1); opacity: 1; }
@@ -761,12 +894,12 @@ export default function SuvCar() {
             `}</style>
 
             <Canvas
-                camera={{ fov: 40, near: 1, far: 100, position: [0, 1, 7] }}
+                camera={{ fov: 40, near: 0.01, far: 100, position: [0, 1, 7] }}
                 gl={{ antialias: true }}
                 style={{ position: 'absolute', inset: 0 }}
             >
                 <Suspense fallback={null}>
-                    <Scene isDriving={isDriving} darkMode={darkMode} firstAnimation={firstAnimation} />
+                    <Scene isDriving={isDriving} darkMode={darkMode} firstAnimation={firstAnimation} isInsideCar={isInsideCar} />
                 </Suspense>
             </Canvas>
 
