@@ -822,28 +822,34 @@ export default function SuvCar() {
                     position: 'absolute',
                     bottom: '60px',
                     right: '0px',
+                    textAlign: 'center',
+                    lineHeight: '1.1',
                     transform: 'translateX(-50%)',
                     zIndex: 20,
                     padding: '0',
                     borderRadius: '100%',
-                    border: 'solid 1px #fff',
-                    background: isDriving ? '#ff4757' : '#4d4d4fff',
-                    color: '#ccc',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    background: isDriving
+                        ? 'radial-gradient(circle at center, #ff4757 0%, #c0392b 100%)'
+                        : 'radial-gradient(circle at center, #5d5d5f 0%, #1e1e20 100%)',
+                    color: '#fff',
                     fontSize: '1rem',
-                    fontWeight: 'bold',
+                    fontWeight: '900',
                     cursor: 'pointer',
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                    boxShadow: isDriving
+                        ? '0 0 30px rgba(255, 71, 87, 0.4), inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -6px 12px rgba(0,0,0,0.5)'
+                        : '0 20px 40px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.1), inset 0 -6px 12px rgba(0,0,0,0.7)',
                     transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                     display: 'flex',
                     alignItems: 'center',
-                    width: '100px',
-                    height: '100px',
+                    width: '120px',
+                    height: '120px',
                     gap: '12px',
                     flexDirection: 'column',
                     justifyContent: 'center',
                 }}
             >
-                {isDriving ? 'STOP ENGINE' : 'START ENGINE'}
+                {isDriving ? <>STOP<br />ENGINE</> : <>START<br />ENGINE</>}
             </button>}
 
             {(showUi && !isDriving) && <button
@@ -854,28 +860,34 @@ export default function SuvCar() {
                     position: 'absolute',
                     bottom: '60px',
                     right: '150px',
+                    textAlign: 'center',
+                    lineHeight: '1.1',
                     transform: 'translateX(-50%)',
                     zIndex: 20,
                     padding: '0',
                     borderRadius: '100%',
-                    border: 'solid 1px #fff',
-                    background: isInsideCar ? '#ff4757' : '#4d4d4fff',
-                    color: '#ccc',
-                    fontSize: '0.8rem',
-                    fontWeight: 'bold',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    background: isInsideCar
+                        ? 'radial-gradient(circle at center, #ff4757 0%, #c0392b 100%)'
+                        : 'radial-gradient(circle at center, #5d5d5f 0%, #1e1e20 100%)',
+                    color: '#fff',
+                    fontSize: '0.7rem',
+                    fontWeight: '900',
                     cursor: 'pointer',
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
+                    boxShadow: isInsideCar
+                        ? '0 0 20px rgba(255, 71, 87, 0.3), inset 0 2px 4px rgba(255,255,255,0.3), inset 0 -4px 8px rgba(0,0,0,0.5)'
+                        : '0 20px 40px rgba(0,0,0,0.2), inset 0 2px 4px rgba(255,255,255,0.1), inset 0 -4px 8px rgba(0,0,0,0.6)',
                     transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                     display: 'flex',
                     alignItems: 'center',
-                    width: '70px',
-                    height: '70px',
+                    width: '80px',
+                    height: '80px',
                     gap: '12px',
                     flexDirection: 'column',
                     justifyContent: 'center',
                 }}
             >
-                {isInsideCar ? 'OUTSIDE CAR' : 'INSIDE CAR'}
+                {isInsideCar ? <>OUTSIDE<br />CAR</> : <>INSIDE<br />CAR</>}
             </button>}
 
             <style>{`
