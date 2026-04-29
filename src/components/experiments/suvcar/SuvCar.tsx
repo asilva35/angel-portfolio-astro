@@ -52,7 +52,7 @@ function Smoke() {
         particles.forEach((p, i) => {
             // 2. Multiplicamos el movimiento por la dirección
             p.pos.y += delta * p.speed * p.direction;
-            p.rot += delta * 0.5;
+            p.rot += delta * 0.125;
 
             // 3. Invertimos la dirección al llegar a los límites
             if (p.pos.y > 3.5) {
@@ -96,6 +96,7 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
     const { camera } = useThree();
     const textures = useTexture(matcapTextures);
     const floorRef = useRef<THREE.Mesh>(null);
+    const timeline = useRef<gsap.core.Timeline | null>(null);
 
     // Camera intro animation
     useEffect(() => {
@@ -262,6 +263,97 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
     }, [isDriving]);
 
     useEffect(() => {
+        if (timeline.current) {
+            timeline.current.kill();
+            timeline.current = null;
+        }
+
+        timeline.current = gsap.timeline();
+
+        if (!isDriving) return;
+
+        timeline.current.to(camera.position, {
+            x: -2,
+            y: 1.25,
+            z: 4.73,
+            duration: 3,
+            ease: "power3.inOut",
+        }, 't1').to(camera.lookAt, {
+            x: 0,
+            y: 0,
+            z: 0,
+            duration: 3,
+            ease: "power3.inOut",
+        }, 't1');
+
+        timeline.current.to(camera.position, {
+            x: -2.1,
+            y: 1.10,
+            z: 1.22,
+            duration: 2,
+            ease: "power3.inOut",
+        }, 't2').to(camera.lookAt, {
+            x: 0,
+            y: 0,
+            z: 0,
+            duration: 2,
+            ease: "power3.inOut",
+        }, 't2');
+
+        timeline.current.to(camera.position, {
+            x: 2.17,
+            y: 1.38,
+            z: -4.39,
+            duration: 2,
+            ease: "power3.inOut",
+        }, 't3').to(camera.lookAt, {
+            x: 0,
+            y: 0,
+            z: 0,
+            duration: 2,
+            ease: "power3.inOut",
+        }, 't3');
+
+        timeline.current.to(camera.position, {
+            x: 0,
+            y: 4.9,
+            z: 4.8,
+            duration: 2,
+            ease: "power3.inOut",
+            onComplete: () => {
+                // loop the animation to the begining
+                timeline.current!.restart();
+            }
+        }, 't4').to(camera.lookAt, {
+            x: 0,
+            y: 0,
+            z: 0,
+            duration: 2,
+            ease: "power3.inOut",
+        }, 't4');
+
+
+        timeline.current.to(camera.position, {
+            x: -1.31,
+            y: 0.829,
+            z: 2.95,
+            duration: 2,
+            ease: "power3.inOut",
+        }, 't5').to(camera.lookAt, {
+            x: 0,
+            y: 0,
+            z: 0,
+            duration: 2,
+            ease: "power3.inOut",
+        }, 't5');
+
+        return () => {
+            timeline.current!.kill();
+            timeline.current = null;
+        }
+    }, [isDriving]);
+
+    useEffect(() => {
         if (floorRef.current) {
             if (darkMode) {
                 floorRef.current.visible = false;
@@ -403,7 +495,7 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
         if (textureConcrete) {
             // Adjust offset to simulate movement. 
             // Negative increment moves the texture "backwards", creating forward illusion.
-            textureConcrete.offset.y += speed * delta * 2;
+            textureConcrete.offset.y += speed * delta * 5;
         }
 
         // 2. Rotate Wheels
@@ -424,6 +516,17 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
         }
     });
 
+    // Detect When user press space key
+    useEffect(() => {
+        const handleKeyPress = (e: KeyboardEvent) => {
+            if (e.key === ' ') {
+                console.log(camera.position.x, camera.position.y, camera.position.z)
+            }
+        };
+        window.addEventListener('keydown', handleKeyPress);
+        return () => window.removeEventListener('keydown', handleKeyPress);
+    }, [isDriving]);
+
     return (
         <>
             {darkMode && <Smoke />}
@@ -442,7 +545,6 @@ function Scene({ isDriving, darkMode, firstAnimation }: { isDriving: boolean, da
                 blur={2}
                 far={4}
             />
-
             <OrbitControls
                 enableDamping
                 dampingFactor={0.06}
@@ -466,7 +568,7 @@ function Loader() {
 
     useEffect(() => {
         if (!active && progress === 100) {
-            const timer = setTimeout(() => setVisible(false), 800);
+            const timer = setTimeout(() => setVisible(true), 800);
             return () => clearTimeout(timer);
         }
     }, [active, progress]);
@@ -474,7 +576,7 @@ function Loader() {
     if (!visible) return null;
 
     return (
-        <div style={{
+        <div id="loader" style={{
             position: 'fixed',
             inset: 0,
             background: '#050505',
@@ -489,21 +591,22 @@ function Loader() {
             fontFamily: '"Outfit", sans-serif'
         }}>
             <div style={{
-                position: 'relative',
+                position: 'absolute',
+                bottom: '100px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center'
             }}>
-                <h1 style={{
+                <p style={{
                     color: 'white',
-                    fontSize: '5rem',
+                    fontSize: '1rem',
                     fontWeight: 900,
                     margin: 0,
-                    letterSpacing: '-4px',
+                    letterSpacing: '4px',
                     fontStyle: 'italic'
                 }}>
-                    {Math.round(progress)}<span style={{ color: '#808ceb', fontSize: '2rem', verticalAlign: 'top', fontStyle: 'normal' }}>%</span>
-                </h1>
+                    {Math.round(progress)}<span style={{ color: '#ffffffff', fontSize: '1rem', verticalAlign: 'top', fontStyle: 'normal' }}>%</span>
+                </p>
 
                 <div style={{
                     width: '300px',
@@ -543,6 +646,13 @@ export default function SuvCar() {
     const [darkMode, setDarkMode] = useState(true);
     const [firstAnimation, setFirstAnimation] = useState(false);
     const [showUi, setShowUi] = useState(false);
+    const engineSound = useRef<HTMLAudioElement | null>(null);
+    const backgroundSound = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        engineSound.current = new Audio('/assets/sounds/start-engine.mp3');
+        backgroundSound.current = new Audio('/assets/music/Leather_Wheel.mp3');
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -583,7 +693,30 @@ export default function SuvCar() {
 
             {/* Controls Button */}
             {showUi && <button
-                onClick={() => setIsDriving(!isDriving)}
+                onClick={() => {
+                    if (!isDriving && engineSound.current && backgroundSound.current) {
+                        engineSound.current.currentTime = 0;
+                        engineSound.current.volume = 0.5;
+                        engineSound.current.play().catch(e => console.error("Sound play failed", e));
+
+                        backgroundSound.current.currentTime = 0;
+                        backgroundSound.current.volume = 0.5;
+                        backgroundSound.current.play().catch(e => console.error("Sound play failed", e));
+                        backgroundSound.current.loop = true;
+                    } else if (isDriving && backgroundSound.current) {
+                        // Slow down audio progressive using gsap
+                        gsap.to(backgroundSound.current, {
+                            volume: 0,
+                            duration: 1,
+                            ease: "power3.out",
+                            onComplete: () => {
+                                backgroundSound.current!.pause();
+                                backgroundSound.current!.currentTime = 0;
+                            }
+                        });
+                    }
+                    setIsDriving(!isDriving);
+                }}
                 style={{
                     position: 'absolute',
                     bottom: '60px',
